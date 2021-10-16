@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
-
+var EventEmitter = require('events');
+const eventEmitter = new EventEmitter()
+var nodemailer = require('nodemailer');
 var controller = require("./../../controller/controller");
 var jwt = require('jsonwebtoken');
 var { alphabets } = require('../../data/alphabet');
@@ -17,6 +19,24 @@ function authChecker(req, res, next) {
         res.end('lütfen login olun');
     }
 }
+eventEmitter.on("send-email", (data) => {
+
+    console.log(data.email)
+    var mailOptions = {
+        from: 'youremail@gmail.com',
+        to: data.email,
+        subject: 'Sending Email using Node.js',
+        text: 'That was easy!'
+    };
+
+    transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+            console.log();
+        } else {
+            console.log('Email sent: ' + info.response);
+        }
+    });
+});
 
 router.get('/login', function (req, res) {
     controller.UsersMongoDBController.Users.login(req.query.email, req.query.password, function (err, result) {
@@ -41,8 +61,11 @@ router.get('/my-profile', authChecker, function (req, res, next) {
 router.post('/signup', function (req, res) {
     controller.UsersMongoDBController.Users.add(req.body, function (err, result) {
         if (err) res.send(err);
-        else
+        else {
+            eventEmitter.emit("send-email", { email: req.body.EMAIL });
             res.send(result);
+        }
+
     });
 });
 
@@ -84,5 +107,15 @@ router.get('/code', function (req, res) {
     });
     res.send("sonuc: " + result);
 });
+
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'youremail@gmail.com',
+        pass: 'yourpassword'
+    }
+});
+
+
 
 module.exports = router;
